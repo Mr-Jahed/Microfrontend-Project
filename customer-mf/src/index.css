@@ -1,0 +1,80 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  background: #f5f7fa;
+  color: #1f2937;
+}
+
+button {
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  background: #2563eb;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+.customer-page {
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.customer-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.customer-page-header h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+}
+
+.customer-page-header p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.customer-table-container {
+  overflow-x: auto;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
+}
+
+.customer-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.customer-table th,
+.customer-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.customer-table th {
+  background: #f9fafb;
+  font-weight: 600;
+}
+
+.customer-table tbody tr:hover {
+  background: #f9fafb;
+}
