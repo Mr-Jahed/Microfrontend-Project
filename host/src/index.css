@@ -45,14 +45,21 @@ body {
   padding: 0;
 }
 
-.host-nav ul li {
+.host-nav ul li a {
   font-size: 14px;
   color: #94a3b8;
-  cursor: pointer;
+  text-decoration: none;
+  padding: 4px 0;
+  transition: color 0.15s;
 }
 
-.host-nav ul li:hover {
+.host-nav ul li a:hover {
   color: white;
+}
+
+.host-nav ul li a.active {
+  color: white;
+  border-bottom: 2px solid #3b82f6;
 }
 
 .host-main {

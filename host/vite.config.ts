@@ -16,6 +16,18 @@ export default defineConfig({
           entry: "http://localhost:3001/remoteEntry.js",
           entryGlobalName: "customer_mf",
         },
+        order_mf: {
+          type: "module",
+          name: "order_mf",
+          entry: "http://localhost:3002/remoteEntry.js",
+          entryGlobalName: "order_mf",
+        },
+        report_mf: {
+          type: "module",
+          name: "report_mf",
+          entry: "http://localhost:3003/remoteEntry.js",
+          entryGlobalName: "report_mf",
+        },
       },
 
       shared: {

@@ -1,4 +1,4 @@
-# Microfrontend Enterprise — Project Notes
+# Microfrontend Enterprise Platform — Project Notes
 
 ---
 
@@ -50,7 +50,7 @@ Each team:
 
 ---
 
-## What We Built So Far
+## What We Built — Phase 1
 
 ### Step 1 — Customer MF as a Standalone App
 
@@ -69,10 +69,6 @@ customer-mf running on :3001
 └─────────────────────────────────┘
 ```
 
-At this point it was just a normal React app. Nothing special yet.
-
----
-
 ### Step 2 — Giving Customer MF a "Public Door"
 
 We created `CustomerApp.tsx`. This is the component we decided to share with the outside world.
@@ -87,8 +83,6 @@ customer-mf
 > The dine-in experience is `App.tsx`.
 > The delivery menu is `CustomerApp.tsx`.
 > Same food, two ways to access it.
-
----
 
 ### Step 3 — Module Federation on Customer MF
 
@@ -114,8 +108,6 @@ remoteEntry.js
  Come fetch it from me."
 ```
 
----
-
 ### Step 4 — Host Configured to Consume Customer MF
 
 We configured the Host to know about Customer MF:
@@ -140,13 +132,72 @@ This is the magic line. The Host is saying:
 
 ---
 
-## What Actually Happens in the Browser
+## What We Built — Phase 2
+
+### React Router added to Host
+
+The Host now has real URL-based routing using React Router:
+
+```
+/           → redirects to /customers
+/customers  → loads CustomerApp from customer-mf (:3001)
+/orders     → loads OrderApp from order-mf (:3002)
+/reports    → loads ReportApp from report-mf (:3003)
+```
+
+Each route loads its MF **lazily** — meaning the code is only fetched from the remote when that route is visited. If you never visit `/reports`, the report-mf code is never downloaded.
+
+### order-mf and report-mf configured as Remotes
+
+Both apps now have:
+- `OrderApp.tsx` / `ReportApp.tsx` — their federated entry points
+- `vite.config.ts` — configured with Module Federation
+- `remoteEntry.js` — generated and served on their ports
+
+### Nav bar is now clickable
+
+The Host nav bar uses `NavLink` from React Router. The active route is highlighted with a blue underline so the user always knows where they are.
+
+### What the browser does now
+
+```
+User clicks "Orders" in nav
+        │
+        ▼
+URL changes to /orders
+        │
+        ▼
+React Router renders <OrderApp />
+        │
+        ▼
+Suspense triggers — shows "Loading..."
+        │
+        │  HTTP request (only happens once)
+        ▼
+Fetches localhost:3002/remoteEntry.js
+        │
+        ▼
+Fetches OrderApp chunk from :3002
+        │
+        ▼
+OrderApp renders inside Host
+```
+
+---
+
+## What Actually Happens in the Browser (Full Flow)
 
 ```
 You open localhost:3000
         │
         ▼
 Host loads its own HTML, CSS, JS
+        │
+        ▼
+React Router reads the URL
+        │
+        ▼
+/ → redirects to /customers
         │
         ▼
 Host sees: "I need customer_mf/CustomerApp"
@@ -179,37 +230,62 @@ Two completely separate servers. Two completely separate codebases. One seamless
 | One team's bug breaks all | Isolated failures |
 | React loaded once but shared by accident | React explicitly shared as singleton |
 | Host must know all code at build time | Host fetches code at runtime |
+| All routes in one app | Each route owned by a separate team |
 
 ---
 
 ## Current Status
 
 ```
-✅ customer-mf  → standalone app working on :3001
-✅ customer-mf  → configured as a Module Federation Remote
-✅ host         → configured as a Module Federation Host
-⏳ federation   → connecting the two in dev mode (in progress)
+✅ Phase 1 — Microfrontend Foundation
+   ✅ customer-mf  → standalone app on :3001
+   ✅ customer-mf  → Module Federation Remote configured
+   ✅ host         → Module Federation Host configured
+
+✅ Phase 2 — Routing & Navigation
+   ✅ React Router in Host
+   ✅ /customers → customer-mf
+   ✅ /orders    → order-mf
+   ✅ /reports   → report-mf
+   ✅ order-mf   → Module Federation Remote configured
+   ✅ report-mf  → Module Federation Remote configured
+   ✅ Active nav link highlighting
+
+🔄 Phase 3 — Shared State & Auth (next)
+🔜 Phase 4 — Django + PostgreSQL API
+🔜 Phase 5 — Docker + Nginx + CI/CD
 ```
 
 ---
 
-## What It Will Look Like When Connected
+## What It Looks Like Now
 
 ```
-localhost:3000
+localhost:3000/customers
 
-┌─────────────────────────────────┐
-│ Enterprise          [Customers] │  ← Host's nav bar
-├─────────────────────────────────┤
-│  Customers        [Add Customer]│  ← CustomerApp loaded
-│                                 │    from :3001 at runtime
-│  ID │ Name  │ Email │ Company   │
-│  1  │ Rahul │ ...   │ ABC       │
-└─────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ Enterprise   Customers  Orders  Reports  │  ← Host nav
+├──────────────────────────────────────────┤
+│  Customers              [Add Customer]   │  ← customer-mf
+│                                          │
+│  ID │ Name  │ Email │ Company │ Status   │
+│  1  │ Rahul │ ...   │ ABC     │ Active   │
+└──────────────────────────────────────────┘
+
+localhost:3000/orders
+
+┌──────────────────────────────────────────┐
+│ Enterprise   Customers  Orders  Reports  │
+├──────────────────────────────────────────┤
+│  Orders                                  │  ← order-mf
+│  Manage order information.               │
+│                                          │
+│  [ Order MF — coming soon ]              │
+└──────────────────────────────────────────┘
 ```
 
 The nav bar is owned by the **Host team**.
-The table is owned by the **Customer team**.
+Each section is owned by its **own team**.
 They run on different ports, built separately, deployed separately — but look like one app to the user.
 
 **That is Microfrontend.**

@@ -232,12 +232,12 @@ The federation manifest generated at build time (and served in dev mode). It act
 - [x] Module Federation configuration (Remote + Host)
 - [x] CustomerApp exposed and consumed by Host
 
-### Phase 2 — Routing & Navigation 🔄
-- [ ] React Router in Host (shell-level routing)
-- [ ] `/customers` → loads customer-mf
-- [ ] `/orders` → loads order-mf
-- [ ] `/reports` → loads report-mf
-- [ ] order-mf and report-mf as federated remotes
+### Phase 2 — Routing & Navigation ✅
+- [x] React Router in Host (shell-level routing)
+- [x] `/customers` → loads customer-mf
+- [x] `/orders` → loads order-mf
+- [x] `/reports` → loads report-mf
+- [x] order-mf and report-mf as federated remotes
 
 ### Phase 3 — Shared State & Auth
 - [ ] Shared authentication context
