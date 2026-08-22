@@ -50,138 +50,161 @@ Each team:
 
 ---
 
-## What We Built — Phase 1
+## Phase 1 — Microfrontend Foundation ✅
 
-### Step 1 — Customer MF as a Standalone App
+### What we built
 
-We built a normal React app that shows a customer table:
+- `customer-mf` as a standalone React app showing a customer table
+- `CustomerApp.tsx` as the federated entry point (the "public door")
+- Module Federation configured on `customer-mf` — generates `remoteEntry.js`
+- Host configured to consume `customer-mf` at runtime via `React.lazy`
 
-```
-customer-mf running on :3001
-
-┌─────────────────────────────────┐
-│  Customers        [Add Customer]│
-│                                 │
-│  ID │ Name  │ Email │ Company   │
-│  1  │ Rahul │ ...   │ ABC       │
-│  2  │ Priya │ ...   │ XYZ       │
-│  3  │ Amit  │ ...   │ TechWorld │
-└─────────────────────────────────┘
-```
-
-### Step 2 — Giving Customer MF a "Public Door"
-
-We created `CustomerApp.tsx`. This is the component we decided to share with the outside world.
+### The two lives of a Microfrontend
 
 ```
 customer-mf
-├── App.tsx         ← used when running standalone on :3001
-└── CustomerApp.tsx ← used when Host wants to load it
+├── App.tsx         ← standalone mode on :3001
+└── CustomerApp.tsx ← federated mode consumed by Host
 ```
 
-> Think of it like a restaurant that also does delivery.
-> The dine-in experience is `App.tsx`.
-> The delivery menu is `CustomerApp.tsx`.
-> Same food, two ways to access it.
-
-### Step 3 — Module Federation on Customer MF
-
-We configured `vite.config.ts` in customer-mf:
+### remoteEntry.js — the catalogue
 
 ```
-name: "customer_mf"       ← "My name is customer_mf"
-
-exposes:
-  "./CustomerApp"          ← "I am willing to share this component"
-
-shared:
-  react, react-dom         ← "Let's not load React twice"
-```
-
-This generated a file called `remoteEntry.js`. Think of it as a catalogue:
-
-```
-remoteEntry.js
-
 "Hello, I am customer_mf.
  I have CustomerApp available.
  Come fetch it from me."
 ```
 
-### Step 4 — Host Configured to Consume Customer MF
-
-We configured the Host to know about Customer MF:
-
-```
-remotes:
-  customer_mf → http://localhost:3001/remoteEntry.js
-```
-
-And in `App.tsx` of the Host:
-
-```tsx
-const CustomerApp = lazy(() => import("customer_mf/CustomerApp"))
-```
-
-This is the magic line. The Host is saying:
-
-```
-"I don't have CustomerApp in my own code.
- Go to customer_mf and get it at runtime."
-```
-
 ---
 
-## What We Built — Phase 2
+## Phase 2 — Routing & Navigation ✅
 
-### React Router added to Host
+### What we built
 
-The Host now has real URL-based routing using React Router:
+- React Router added to Host with real URL-based routing
+- `order-mf` and `report-mf` configured as Module Federation remotes
+- `OrderApp.tsx` and `ReportApp.tsx` created as federated entry points
+- Nav bar uses `NavLink` with active route highlighting
+
+### Routes
 
 ```
 /           → redirects to /customers
 /customers  → loads CustomerApp from customer-mf (:3001)
-/orders     → loads OrderApp from order-mf (:3002)
-/reports    → loads ReportApp from report-mf (:3003)
+/orders     → loads OrderApp   from order-mf    (:3002)
+/reports    → loads ReportApp  from report-mf   (:3003)
 ```
 
-Each route loads its MF **lazily** — meaning the code is only fetched from the remote when that route is visited. If you never visit `/reports`, the report-mf code is never downloaded.
+Each MF is loaded **lazily** — only fetched when that route is visited.
 
-### order-mf and report-mf configured as Remotes
+---
 
-Both apps now have:
-- `OrderApp.tsx` / `ReportApp.tsx` — their federated entry points
-- `vite.config.ts` — configured with Module Federation
-- `remoteEntry.js` — generated and served on their ports
+## Phase 3 — Shared Auth Context ✅
 
-### Nav bar is now clickable
-
-The Host nav bar uses `NavLink` from React Router. The active route is highlighted with a blue underline so the user always knows where they are.
-
-### What the browser does now
+### The problem Phase 3 solves
 
 ```
-User clicks "Orders" in nav
-        │
-        ▼
-URL changes to /orders
-        │
-        ▼
-React Router renders <OrderApp />
-        │
-        ▼
-Suspense triggers — shows "Loading..."
-        │
-        │  HTTP request (only happens once)
-        ▼
-Fetches localhost:3002/remoteEntry.js
-        │
-        ▼
-Fetches OrderApp chunk from :3002
-        │
-        ▼
-OrderApp renders inside Host
+Before Phase 3:
+  Host has no concept of a logged-in user
+  Each MF is completely isolated
+  No way to know who is using the app
+  No protected routes
+
+After Phase 3:
+  Host owns authentication
+  User logs in once → all MFs know who they are
+  Protected routes → redirect to /login if not authenticated
+  User info passed as prop into each MF
+  Role-based UI (admin sees Add Customer, viewer does not)
 ```
+
+### What we built
+
+#### AuthContext (`host/src/context/AuthContext.tsx`)
+
+The single source of truth for authentication. Lives in the Host.
+
+```
+AuthContext provides:
+  user          → the logged-in user object (or null)
+  login()       → validates credentials, sets user
+  logout()      → clears user
+  isAuthenticated → boolean shortcut
+```
+
+Mock credentials (will be replaced by Django API in Phase 4):
+```
+admin@enterprise.com  / admin123   → role: admin
+viewer@enterprise.com / viewer123  → role: viewer
+```
+
+#### LoginPage (`host/src/pages/LoginPage.tsx`)
+
+A clean login form at `/login`. On success navigates to `/customers`. Shows error message on wrong credentials.
+
+#### ProtectedRoute (`host/src/components/ProtectedRoute.tsx`)
+
+Wraps any route that requires authentication. If not logged in, redirects to `/login`.
+
+```tsx
+<ProtectedRoute>
+  <CustomerApp user={user} />
+</ProtectedRoute>
+```
+
+#### Token passing — user prop
+
+The Host passes the logged-in user down into each MF as a prop:
+
+```
+Host (owns AuthContext)
+  │
+  │  user prop
+  ▼
+CustomerApp / OrderApp / ReportApp
+```
+
+This is the correct Microfrontend pattern. The MFs do NOT have their own auth — they receive identity from the Host.
+
+#### Role-based UI in customer-mf
+
+```
+Admin  → sees "Add Customer" button
+Viewer → button is hidden
+Both   → see their name and role in the header
+```
+
+### How the full auth flow works
+
+```
+User opens localhost:3000
+        │
+        ▼
+ProtectedRoute checks isAuthenticated
+        │
+        ▼ (not logged in)
+Redirects to /login
+        │
+        ▼
+User enters admin@enterprise.com / admin123
+        │
+        ▼
+AuthContext.login() validates → sets user in state
+        │
+        ▼
+Navigates to /customers
+        │
+        ▼
+CustomerApp receives { user } prop from Host
+        │
+        ▼
+Shows "Admin User — admin" badge
+Shows "Add Customer" button (admin only)
+```
+
+### Bug fixed — remotes.d.ts
+
+The original `remotes.d.ts` used a top-level `import` statement which TypeScript does not allow in ambient declaration files. Fixed by inlining the `RemoteAuthUser` interface directly in the file.
 
 ---
 
@@ -191,33 +214,23 @@ OrderApp renders inside Host
 You open localhost:3000
         │
         ▼
-Host loads its own HTML, CSS, JS
+ProtectedRoute → not authenticated → redirect to /login
         │
         ▼
-React Router reads the URL
+User logs in → AuthContext sets user state
         │
         ▼
-/ → redirects to /customers
+Navigate to /customers
         │
         ▼
-Host sees: "I need customer_mf/CustomerApp"
-        │
-        │  HTTP request
-        ▼
-Fetches localhost:3001/remoteEntry.js
+Host fetches localhost:3001/remoteEntry.js
         │
         ▼
-remoteEntry says: "CustomerApp is in this chunk"
-        │
-        │  HTTP request
-        ▼
-Fetches that chunk from :3001
+CustomerApp renders with user prop
         │
         ▼
-CustomerApp renders inside Host's <main>
+Shows customer table + user badge + role-based button
 ```
-
-Two completely separate servers. Two completely separate codebases. One seamless UI.
 
 ---
 
@@ -231,6 +244,7 @@ Two completely separate servers. Two completely separate codebases. One seamless
 | React loaded once but shared by accident | React explicitly shared as singleton |
 | Host must know all code at build time | Host fetches code at runtime |
 | All routes in one app | Each route owned by a separate team |
+| Auth duplicated in every page | Auth owned by Host, passed to MFs |
 
 ---
 
@@ -238,20 +252,27 @@ Two completely separate servers. Two completely separate codebases. One seamless
 
 ```
 ✅ Phase 1 — Microfrontend Foundation
-   ✅ customer-mf  → standalone app on :3001
-   ✅ customer-mf  → Module Federation Remote configured
-   ✅ host         → Module Federation Host configured
+   ✅ customer-mf standalone app on :3001
+   ✅ customer-mf Module Federation Remote
+   ✅ host Module Federation Host
 
 ✅ Phase 2 — Routing & Navigation
    ✅ React Router in Host
    ✅ /customers → customer-mf
    ✅ /orders    → order-mf
    ✅ /reports   → report-mf
-   ✅ order-mf   → Module Federation Remote configured
-   ✅ report-mf  → Module Federation Remote configured
+   ✅ order-mf and report-mf as federated remotes
    ✅ Active nav link highlighting
 
-🔄 Phase 3 — Shared State & Auth (next)
+✅ Phase 3 — Shared Auth Context
+   ✅ AuthContext in Host
+   ✅ LoginPage with mock credentials
+   ✅ ProtectedRoute — redirects if not authenticated
+   ✅ User prop passed into all MFs
+   ✅ Role-based UI in customer-mf
+   ✅ Logout button in nav
+   ✅ remotes.d.ts bug fixed
+
 🔜 Phase 4 — Django + PostgreSQL API
 🔜 Phase 5 — Docker + Nginx + CI/CD
 ```
@@ -261,31 +282,36 @@ Two completely separate servers. Two completely separate codebases. One seamless
 ## What It Looks Like Now
 
 ```
-localhost:3000/customers
+localhost:3000/login
 
-┌──────────────────────────────────────────┐
-│ Enterprise   Customers  Orders  Reports  │  ← Host nav
-├──────────────────────────────────────────┤
-│  Customers              [Add Customer]   │  ← customer-mf
-│                                          │
-│  ID │ Name  │ Email │ Company │ Status   │
-│  1  │ Rahul │ ...   │ ABC     │ Active   │
-└──────────────────────────────────────────┘
+┌──────────────────────────────┐
+│         Enterprise           │
+│    Sign in to your account   │
+│                              │
+│  Email: [________________]   │
+│  Password: [_____________]   │
+│                              │
+│       [ Sign In ]            │
+│                              │
+│  Demo: admin@enterprise.com  │
+│        admin123              │
+└──────────────────────────────┘
 
-localhost:3000/orders
+localhost:3000/customers (logged in as admin)
 
-┌──────────────────────────────────────────┐
-│ Enterprise   Customers  Orders  Reports  │
-├──────────────────────────────────────────┤
-│  Orders                                  │  ← order-mf
-│  Manage order information.               │
-│                                          │
-│  [ Order MF — coming soon ]              │
-└──────────────────────────────────────────┘
+┌────────────────────────────────────────────────────┐
+│ Enterprise  Customers  Orders  Reports              │
+│                              Admin User  admin  [Logout] │
+├────────────────────────────────────────────────────┤
+│  Customers                    Admin User — admin    │
+│                               [Add Customer]        │
+│  ID │ Name  │ Email │ Company │ Status              │
+│  1  │ Rahul │ ...   │ ABC     │ Active              │
+└────────────────────────────────────────────────────┘
 ```
 
-The nav bar is owned by the **Host team**.
-Each section is owned by its **own team**.
-They run on different ports, built separately, deployed separately — but look like one app to the user.
+The nav bar and auth are owned by the **Host team**.
+The customer table and role-based UI are owned by the **Customer team**.
+Auth flows from Host → MF via props. No shared state library needed.
 
-**That is Microfrontend.**
+**That is enterprise Microfrontend with authentication.**

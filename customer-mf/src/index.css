@@ -78,3 +78,17 @@ button:hover {
 .customer-table tbody tr:hover {
   background: #f9fafb;
 }
+
+.customer-page-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.customer-user-badge {
+  font-size: 13px;
+  color: #6b7280;
+  background: #f1f5f9;
+  padding: 4px 12px;
+  border-radius: 99px;
+}

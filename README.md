@@ -239,10 +239,13 @@ The federation manifest generated at build time (and served in dev mode). It act
 - [x] `/reports` → loads report-mf
 - [x] order-mf and report-mf as federated remotes
 
-### Phase 3 — Shared State & Auth
-- [ ] Shared authentication context
-- [ ] Token passing between Host and remotes
-- [ ] Protected routes
+### Phase 3 — Shared State & Auth ✅
+- [x] Shared authentication context (AuthContext in Host)
+- [x] Token passing between Host and remotes (user prop)
+- [x] Protected routes (ProtectedRoute component)
+- [x] Login page with mock credentials
+- [x] Role-based UI (admin vs viewer)
+- [x] Logout button in nav
 
 ### Phase 4 — API Layer
 - [ ] Django REST Framework backend
