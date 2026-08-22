@@ -281,4 +281,4 @@ This is a learning and reference project. Each folder (`host`, `customer-mf`, `o
 
 ## License
 
-MIT
+Owned by Mr-Jahed Inamdar
