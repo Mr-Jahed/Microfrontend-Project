@@ -38,8 +38,8 @@ Each Microfrontend is an **independently deployable React application** that can
 | Module Federation | @module-federation/vite |
 | Styling | Plain CSS (component-scoped) |
 | Package Manager | npm |
-| Backend *(planned)* | Django + Django REST Framework |
-| Database *(planned)* | PostgreSQL |
+| Backend | Django + Django REST Framework |
+| Database | SQLite *(dev)* / PostgreSQL *(planned)* |
 | Containerization *(planned)* | Docker + Docker Compose |
 | Reverse Proxy *(planned)* | Nginx |
 | CI/CD *(planned)* | GitHub Actions |
@@ -53,28 +53,40 @@ microfrontend-enterprise/
 │
 ├── host/                   # Shell application — composes all MFs
 │   ├── src/
-│   │   ├── App.tsx         # Loads remote MFs via React.lazy
-│   │   ├── remotes.d.ts    # TypeScript declarations for remotes
+│   │   ├── context/
+│   │   │   └── AuthContext.tsx  # Auth state — user, login, logout
+│   │   ├── components/
+│   │   │   └── ProtectedRoute.tsx
+│   │   ├── pages/
+│   │   │   └── LoginPage.tsx
+│   │   ├── App.tsx              # Routes + Shell layout
+│   │   ├── remotes.d.ts         # TypeScript declarations for remotes
 │   │   └── main.tsx
-│   └── vite.config.ts      # Federation Host config
+│   └── vite.config.ts           # Federation Host config
 │
 ├── customer-mf/            # Customer Microfrontend (Remote)
 │   ├── src/
 │   │   ├── components/
 │   │   │   └── CustomerList.tsx
-│   │   ├── data/
-│   │   │   └── customerData.ts
 │   │   ├── pages/
 │   │   │   └── CustomerPage.tsx
+│   │   ├── services/
+│   │   │   └── customerService.ts  # Axios → Django API
 │   │   ├── types/
 │   │   │   └── customer.ts
-│   │   ├── CustomerApp.tsx  # Federated entry point (exposed)
-│   │   └── App.tsx          # Standalone entry point
-│   └── vite.config.ts       # Federation Remote config
+│   │   ├── CustomerApp.tsx      # Federated entry point (exposed)
+│   │   └── App.tsx              # Standalone entry point
+│   └── vite.config.ts           # Federation Remote config
 │
-├── order-mf/               # Order Microfrontend (Remote) — in progress
+├── order-mf/               # Order Microfrontend (Remote)
+├── report-mf/              # Report Microfrontend (Remote)
 │
-├── report-mf/              # Report Microfrontend (Remote) — in progress
+├── backend/                # Django REST API
+│   ├── core/               # Django project settings
+│   ├── customers/          # Customer app — model, views, serializer
+│   ├── .env                # DB credentials (not committed)
+│   ├── requirements.txt
+│   └── manage.py
 │
 ├── .gitignore
 └── README.md
@@ -90,7 +102,7 @@ microfrontend-enterprise/
 | customer-mf | 3001 | Remote — Customer domain |
 | order-mf | 3002 | Remote — Order domain |
 | report-mf | 3003 | Remote — Report domain |
-| Django API *(planned)* | 8000 | Backend REST API |
+| Django API | 8000 | Backend REST API |
 
 ---
 
@@ -100,6 +112,7 @@ microfrontend-enterprise/
 
 - Node.js 18+
 - npm 9+
+- Python 3.10+
 
 ### Install dependencies for all apps
 
@@ -115,11 +128,18 @@ cd ../report-mf && npm install
 Open a separate terminal for each app:
 
 ```bash
-# Terminal 1 — Customer MF (start remotes first)
+# Terminal 1 — Backend (start first)
+cd backend
+venv\Scripts\activate
+python manage.py migrate
+python manage.py seed_customers
+python manage.py runserver
+
+# Terminal 2 — Customer MF
 cd customer-mf
 npm run dev
 
-# Terminal 2 — Host
+# Terminal 3 — Host
 cd host
 npm run dev
 ```
@@ -247,11 +267,15 @@ The federation manifest generated at build time (and served in dev mode). It act
 - [x] Role-based UI (admin vs viewer)
 - [x] Logout button in nav
 
-### Phase 4 — API Layer
-- [ ] Django REST Framework backend
-- [ ] PostgreSQL database
-- [ ] Axios service layer in each MF
-- [ ] Replace local mock data with real API calls
+### Phase 4 — API Layer ✅
+- [x] Django REST Framework backend
+- [x] SQLite database (dev) — PostgreSQL planned for Phase 5
+- [x] `USE_POSTGRES` flag in settings for easy PostgreSQL switch
+- [x] Axios service layer in customer-mf
+- [x] Replace local mock data with real API calls
+- [x] CORS configured for all MF dev servers
+- [x] Seed data management command
+- [x] Loading and error states in CustomerPage
 
 ### Phase 5 — Infrastructure
 - [ ] Docker + Docker Compose
