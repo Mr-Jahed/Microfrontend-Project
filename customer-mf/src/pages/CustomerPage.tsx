@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import CustomerList from "../components/CustomerList";
-import { customers } from "../data/customerData";
+import { customerService } from "../services/customerService";
+import type { Customer } from "../types/customer";
 
 interface AuthUser {
   id: number;
@@ -13,6 +15,18 @@ interface Props {
 }
 
 const CustomerPage = ({ user }: Props) => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    customerService
+      .getAll()
+      .then(setCustomers)
+      .catch(() => setError("Failed to load customers. Is the API running?"))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <section className="customer-page">
       <div className="customer-page-header">
@@ -31,7 +45,10 @@ const CustomerPage = ({ user }: Props) => {
           )}
         </div>
       </div>
-      <CustomerList customers={customers} />
+
+      {loading && <p className="customer-status">Loading customers...</p>}
+      {error && <p className="customer-error">{error}</p>}
+      {!loading && !error && <CustomerList customers={customers} />}
     </section>
   );
 };
