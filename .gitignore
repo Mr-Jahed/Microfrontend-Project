@@ -57,8 +57,9 @@ desktop.ini
 coverage/
 .nyc_output/
 
-# ─── Docker (future) ────────────────────────────────────────
+# ─── Docker ─────────────────────────────────────────────────
 *.env.docker
+.docker/
 
 # ─── Python / Django ────────────────────────────────────────
 __pycache__/
